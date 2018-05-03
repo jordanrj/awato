@@ -1,167 +1,250 @@
-// Returns string dollar value of format '$X.XX' as float.  (not limited to 3 digits).
-var processClaimValue = function(claimValueStr) {
-  claimValueStr = claimValueStr.replace(/\s/g, ''); //remove any potential spaces
-  claimValueStr = claimValueStr.slice((claimValueStr.length - 1) * (- 1)); //remove dollar sign
-  return parseFloat(claimValueStr);
-}
-
 
 var app = angular.module("chartApp", ['chart.js']);
 
+
+/* dataFactory is used to request data from the tsa website, and defines the functions used to process the data into a useable format. */
 app.factory('dataFactory', function($http) {
-  var service = {};
-  var monthYear = ''; //month and year in MON-YR format
-  var airlines = [];
-  var values = [];
-  var airports = [];
-  var claims = [];
+  var dataFactory = {};
 
-  service.setMonthYear = function(month) {
-    monthYear = month;
+  dataFactory.getData = function() {
+    /* gets data from tsa.gov source via proxy */
+    return $http({
+      url: "https://cors-anywhere.herokuapp.com/https://www.dhs.gov/sites/default/files/publications/claims-2010-2013_0.xls",
+      method: "GET",
+      responseType: "arraybuffer"
+    })
   }
 
-  service.addAirline = function(airline) {
-
-  }
-
-  service.addValue = function(index, value) {
-
-  }
-
-  service.addAirport = function(airport) {
-
-  }
-
-  service.addClaim = function(index) {
-
-  }
-
-  service.getMonthYear = function() {
-    return monthYear;
-  }
-
-  service.getAirlines = function() {
-    return airlines;
-  }
-
-  service.getValues = function() {
-    return values;
-  }
-
-  service.getAirports = function() {
-    return airports;
-  }
-
-  service.getClaims = function() {
-    return claims;
-  }
-
-  //returns the average claims for all airlines for the month
-  service.getAverageClaims = function() {
-    var totalClaims = 0;
-    for (let i = 0; i < claims.length; i++) {
-      totalClaims += claims[i];
-    }
-    return totalClaims / claims.length;
-  }
-
-
-})
-
-app.controller("chartController", function($scope, $http) {
-  $scope.labels = ["January", "February", "March", "April", "May", "June", "July"];
-  $scope.series = ['Series A', 'Series B'];
-  
-  /* gets data from tsa.gov source via proxy;  converts to json using sheetjs */
-  $http({
-    url: "https://cors-anywhere.herokuapp.com/https://www.dhs.gov/sites/default/files/publications/claims-2010-2013_0.xls",
-    method: "GET",
-    responseType: "arraybuffer"
-    
-
-  })
-  .then(function(res) {
-    //converts raw data to JSON
-    var data = new Uint8Array(res.data);
-    //using xlsx and workbooks
-    var workbook = XLSX.read(data, {type: 'array'});
-    var sheet = workbook.SheetNames[0];
-    var worksheet = workbook.Sheets[sheet];
+  //Converts raw xls data to JSON using xlsx
+  dataFactory.convertToJSON = function(res) {
+    let data = new Uint8Array(res.data);
+    let workbook = XLSX.read(data, {type: 'array'});
+    let sheet = workbook.SheetNames[0];
+    let worksheet = workbook.Sheets[sheet];
 
     return XLSX.utils.sheet_to_json(worksheet);
-  })
-  .then(function(dataSet) {
-    $scope.aggregateData(dataSet);
-  });
+  }
 
-
-  $scope.aggregateData = function(dataSet) {
-    /***** NOTE THAT THE NESTED ARRAYS WILL EVENTUALLY BE CUSTOM OBJECTS */
-    //will aggregate data points by month using string matching of the "Date Received" object key.
-    // All "Date Received" values are structured like so: '1-Jan-13'.  We will use the month and year portion.
-
-    //initialize arrays with first data item
-    var airports = [dataSet[0]["Airport Code"]];
-    var claims = [1];
-    var airlines = [dataSet[0]["Airline Name"]];
-    let airlineName = dataSet[0]["Airline Name"];
+  /*
+    Aggregates data into an object containing 4 arrays:
+      "airlines": contains a non-repeating list of airlines (as strings) listed in the data.
+      "claims": contains integers indicating the number of claims for each airline. The index of each element corresponds to the associated airline in "airlines".
+      "airports": contains a list of non-repeating airline codes (as strings).  Used instead of airport names due to less ambiguity.
+      "montlyValue": contains a series of arrays, with the index of each nested array corresponding to the index of associated airport in "airports".
+          *Each nested array contains a series of objects, each having two attributes: 1) the month ('MM-YY') and 2) the total value of claims for that month (float).
+  */
+  dataFactory.aggregateData = function(dataSet) {
+    //retrieving initial values from data
+    let airportName = dataSet[0]["Airport Name"].trim() + " (" + dataSet[0]["Airport Code"].trim() +")";
+    let airlineName = dataSet[0]["Airline Name"].trim();
     let claimDate = dataSet[0]["Date Received"].slice(-6);
     let claimValueStr = dataSet[0]["Close Amount"];
-    let claimValue = processClaimValue(claimValueStr);
 
-    
-    
+    let claimValue = dataFactory.processClaimValue(claimValueStr);
+
+    //initializing data arrays
+    var airlines = [airlineName];    
+    var airports = [airportName];
+    var monthlyClaims = [[{ date: claimDate, total: 1 }]]
     var monthlyValue = [[{ date: claimDate, value: claimValue }]]; /*array will hold arrays that correspond to the index of each airline.  each nested array will hold a series of objects.
-                             Objects in nested arrays will be structured in the format: { date: "JAN-10", value: 100 } */
+                                                                     Objects in nested arrays will be structured in the format: { date: "JAN-10", value: 100.00 } */
 
-    for (let i =1; i < dataSet.length; i++) {
-      let airportName = dataSet[i]["Airport Code"];
+    for (let i = 1; i < dataSet.length; i++) {
+      if (dataSet[i]["Date Received"] === undefined) {
+        continue;
+      } 
+
+      airportName = dataSet[i]["Airport Name"].trim() + " (" + dataSet[i]["Airport Code"].trim() +")";
+      airlineName = dataSet[i]["Airline Name"].trim();
+      claimDate = dataSet[i]["Date Received"].slice(-6);
+      claimValueStr = dataSet[i]["Close Amount"];
+
+      claimValue = dataFactory.processClaimValue(claimValueStr);
+
       for (let j = 0; j < airports.length; j++) {
         if (airportName === airports[j]) {
-          claims[j]++;
+
+          if (monthlyClaims[j][monthlyClaims[j].length - 1].date === claimDate) {
+            monthlyClaims[j][monthlyClaims[j].length - 1].total += 1;
+          } else {
+            monthlyClaims[j].push({ date: claimDate, total: 1 });
+          }
           break;
-        } else if (j === airports.length - 1) {
+        } else if (j === airports.length - 1) {      
           airports.push(airportName);
-          claims.push(1);
+          monthlyClaims.push([{ date: claimDate, total: 1 }]);
         }
       }
 
       for (let j = 0; j < airlines.length; j++) {
-        if (dataSet[i]["Date Received"] === undefined) {
-          break;
-        }
-
-        airlineName = dataSet[i]["Airline Name"];
-        claimDate = dataSet[i]["Date Received"].slice(-6);
-        claimValueStr = dataSet[i]["Close Amount"];
-        claimValue = processClaimValue(claimValueStr);
-        
         if (airlineName === airlines[j]) {
-          //do stuff
           if (monthlyValue[j][monthlyValue[j].length - 1].date === claimDate) {
             monthlyValue[j][monthlyValue[j].length - 1].value += claimValue;
           } else {
-            monthlyValue[j].push({date: claimDate, value: claimValue});
+            monthlyValue[j].push({ date: claimDate, value: claimValue });
           }
           break;
         } else if (j === airlines.length - 1) {
-          //add airline to array
           airlines.push(airlineName);
           monthlyValue.push([{date: claimDate, value: claimValue}]);
         }
       }
     }
-    console.log(airports);
-    console.log(claims);
-    console.log(airlines);
-    console.log(monthlyValue);
+    return {airportList: airports, claims: monthlyClaims, airlineList: airlines, cost: monthlyValue};
   }
 
+  // Returns string dollar value of format '$X.XX' as float.  (not limited to 3 digits).
+  dataFactory.processClaimValue = function(claimValueStr) {
+    claimValueStr = claimValueStr.replace(/\s/g, '');
+    claimValueStr = claimValueStr.replace(/\$/g, '');
+    if (claimValueStr === '-' || claimValueStr === '') {
+      claimValueStr = "0";
+    }
+    return parseFloat(claimValueStr);
+  }
 
-  $scope.onClick = function (points, evt) {
-    console.log(points, evt);
-  };
-  $scope.datasetOverride = [{ yAxisID: 'y-axis-1' }, { yAxisID: 'y-axis-2' }];
+  return dataFactory;
+})
+
+
+app.controller("chartController", ['$scope', 'dataFactory', function($scope, dataFactory) { 
+  $scope.selectedAirline = "Delta Air Lines";
+  $scope.selectedAirport = "McCarran International (LAS)";
+  $scope.startDate = "Jan-10";
+  $scope.endDate = "Dec-13";
+  $scope.months = [];
+  $scope.data = [];
+  $scope.labels = [];
+  $scope.series = ['Series A', 'Series B'];
+  $scope.type = "line";
+
+  dataFactory.getData()
+  .then(function(res) {
+    let jsonData = dataFactory.convertToJSON(res);
+
+    $scope.dataBin = dataFactory.aggregateData(jsonData);  //dataBin will hold all aggregated data, and will be referenced as needed.
+  })
+  .then(function() {
+    $scope.updateLinePage();
+  })
+
+  $scope.getMonths = function() {
+    $scope.months = [];
+
+    for (let i = 0; i < $scope.dataBin.cost[0].length; i++) { //using first entry because I know Delta has claims for every month and i'm a bit lazy.
+      let month = $scope.dataBin.cost[0][i]["date"];
+      $scope.months.push(month); 
+    }
+  }
+
+  //Ensures that graph labels correspond to range specified in options
+  $scope.createLabels = function() {
+    $scope.labels = [];
+
+    for (let i = 0; i < $scope.months.length; i++) {
+      let month = $scope.dataBin.cost[0][i]["date"];
+      if (month === $scope.startDate) {
+        do {
+          $scope.labels.push(month); 
+          i++;
+          month = $scope.months[i];                           
+        } while (month !== $scope.endDate); 
+
+        $scope.labels.push(month); 
+        break;
+      }
+    }
+  }
+
+  $scope.updateData = function() {
+    //find index of target
+    var targetIndex = -1;
+
+    for (let i = 0; i < $scope.dataBin.airlineList.length; i++) {
+      if ($scope.selectedAirline === $scope.dataBin.airlineList[i]) {
+        targetIndex = i;
+        break;
+      }
+    }
+    if (targetIndex === -1) {
+      console.error("Unable to find matching airline in data set.");
+    }
+
+    //Find data by month in range, taking into account months with no data
+    let target = $scope.dataBin.cost[targetIndex];
+    let targetCount = 0;
+    $scope.data = [];
+    let value = 0;
+    for (let i = 0; i < $scope.labels.length; i++) {
+      if (target[targetCount]["date"] === $scope.labels[i]) {
+        value = target[targetCount]["value"];
+        targetCount++;
+      } else {
+        value = 0;
+      }
+      $scope.data.push(value);
+      if (targetCount === $scope.labels.length) {
+        break;
+      }      
+    }
+  }
+
+  $scope.updateBarData = function() {
+    var targetIndex = -1;
+    console.log($scope.dataBin.airportList); for (let i = 0; i < $scope.dataBin.airportList.length; i++) {
+      if ($scope.selectedAirport === $scope.dataBin.airportList[i]) {
+        targetIndex = i;
+      }
+    }
+    if (targetIndex === -1) {
+      console.error("Unable to find matching airport in data set.");
+    }
+    let target = $scope.dataBin.claims[targetIndex];
+    let targetCount = 0;
+    $scope.data = [];
+    let total = 0;
+    for (let i = 0; i < $scope.labels.length; i++) {
+      if (target[targetCount]["date"] === $scope.labels[i]) {
+        total = target[targetCount].total;
+        targetCount++;
+      } else {
+        total = 0;
+      }
+      $scope.data.push(total);
+      if (targetCount === $scope.labels.length) {
+        break;
+      }      
+    }
+  }
+  
+
+  $scope.updateLinePage = function() {
+    $scope.type = "line";
+
+    var lineOps = angular.element(document.querySelector("#barOptions"));     
+    lineOps.addClass("hidden"); 
+    var barOps = angular.element(document.querySelector("#lineOptions"));    
+    barOps.removeClass("hidden");
+    
+    $scope.getMonths();
+    $scope.createLabels();
+    $scope.updateData();
+  }
+
+  $scope.updateBarPage = function() {
+    $scope.type = "bar";
+  
+    var lineOps = angular.element(document.querySelector("#lineOptions"));     
+    lineOps.addClass("hidden"); 
+    var barOps = angular.element(document.querySelector("#barOptions"));    
+    barOps.removeClass("hidden");
+
+    $scope.getMonths();
+    $scope.createLabels();
+    $scope.updateBarData();
+  }
+
+  $scope.datasetOverride = [{ yAxisID: 'y-axis-1' }];
   $scope.options = {
     scales: {
       yAxes: [
@@ -170,65 +253,10 @@ app.controller("chartController", function($scope, $http) {
           type: 'linear',
           display: true,
           position: 'left'
-        },
-        {
-          id: 'y-axis-2',
-          type: 'linear',
-          display: true,
-          position: 'right'
         }
       ]
     }
   };
-});
-
-
-  /*//defining data class
-  $scope.createNewMonth = function(monthYear) {
-    this.monthYear = monthYear,
-    //airports and claims
-    this.airports = [],
-    this.claims = [],
-
-    //airlines and value should correspond
-    this.airlines = [],
-    this.value = []
-
-    //this.entries = []
-  }
-
-  /*$scope.valueLostByAirline = function() {
-    //cycles through each month to add up values of claims for each airline
-    for (let i = 0; i < $scope.aggregatedData.length; i++) {
-      for (let j = 0; j < $scope.aggregatedData[i].length; j++) {
-
-      }
-    }
-  }
-
-  $scope.addToMonth = function(item, month) {
-    let airline = item["Airline Name"];
-    let airportCode = item["Airport Code"];
-    let airportName = item["Airport Code"];
-    let claimValue = parseFloat(item["Close Amount"].slice(-4));
-
-    for (let i = 0; i < month.airlines.length; i++) {
-      if (airline === month.airlines[i]) {
-        month.value[i] += claimValue;
-        break;
-      } else if (i === month.airlines.length - 1) {
-        month.airlines.push(airline);
-        month.value.push(claimValue);
-      }
-    }
-
-    for (let i = 0; i < month.airports.length; i++) {
-      if (airportCode === month.airports[i]) {
-        month.claims[i]++;
-        break;
-      } else if (i === month.airports.length - 1) {
-        month.airports.push(airportCode);
-        month.claims.push(1);
-      }
-    }
-  }*/
+ 
+  
+}]);
