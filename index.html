@@ -13,12 +13,13 @@
         <div ng-app="chartApp" ng-controller="chartController">
             <div>
                 <!-- buttons to switch graph shown -->
-                <button ng-click="updateLinePage()">Value Lost by Airline</button>
-                <button ng-click="updateBarPage()">Number of Claims by Airport</button>
-                
+                <div class="graph-btns">
+                    <button ng-click="updateLinePage()" class="graph-btn">Value Lost by Airline</button>
+                    <button ng-click="updateBarPage()" class="graph-btn">Number of Claims by Airport</button>
+                </div> 
             </div>
     
-            <div>
+            <div class="options-area">
                 <!-- Options for graph view -->
                 <!-- if line graph -->
                 <form id="lineOptions" ng-submit="updateLinePage()">
@@ -26,13 +27,13 @@
                     <select ng-model="selectedAirline" ng-options="x for x in dataBin.airlineList">
                     </select>
 
-                    <label for="">Start Date: </label>
+                    <label for=""> Start Date: </label>
                     <select ng-model="startDate" ng-options="x for x in months"></select>
 
-                    <label for="">End Date: </label>
+                    <label for=""> End Date: </label>
                     <select ng-model="endDate" ng-options="x for x in months"></select>
-
-                    <input type="submit">
+              
+                    <input class="submit-btn" type="submit">
                 </form>
 
                 <form id="barOptions" class="hidden" ng-submit="updateBarPage()">
@@ -46,18 +47,20 @@
                     <label for="">End Date: </label>
                     <select ng-model="endDate" ng-options="x for x in months"></select>
 
-                    <input type="submit">
+                    <input class="submit-btn" type="submit">
                 </form>
             </div>
     
-            <div>
+            <div class="graph-container">
                 <!-- should hold the graph itself -->
-                <canvas id="graph" class="chart-base" chart-data="data" chart-labels="labels" chart-series="series" chart-options="options" chart-type="type" chart-dataset-override="datasetOverride" chart-click="onClick">
+                <canvas id="graph" class="chart-base graph" chart-data="data" chart-labels="labels" chart-series="series" chart-options="options" chart-type="type" chart-dataset-override="datasetOverride" chart-click="onClick">
             </canvas>
             </div>
     
-            <div>
+            <div id="labelHolder" class="label-holder">
                 <!-- should hold summary of graph data -->
+                <h1 id="airlineLabel" class="chart-label">{{selectedAirline}}</h1>
+                <h1 id="airportLabel" class="hidden chart-label">{{selectedAirport}}</h1>
             </div>
         </div>
         <script src="node_modules/xlsx/dist/xlsx.full.min.js"></script>

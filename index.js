@@ -140,22 +140,26 @@ app.controller("chartController", ['$scope', 'dataFactory', function($scope, dat
   //Ensures that graph labels correspond to range specified in options
   $scope.createLabels = function() {
     $scope.labels = [];
-
+    $scope.range = [];
     for (let i = 0; i < $scope.months.length; i++) {
       let month = $scope.dataBin.cost[0][i]["date"];
       if (month === $scope.startDate) {
+        $scope.range.push(i);
         do {
           $scope.labels.push(month); 
           i++;
           month = $scope.months[i];                           
         } while (month !== $scope.endDate); 
-
+        if (month === $scope.endDate) {
+          $scope.range.push(i);
+        }
         $scope.labels.push(month); 
         break;
       }
     }
   }
 
+  //updates data for line graph
   $scope.updateData = function() {
     //find index of target
     var targetIndex = -1;
@@ -169,12 +173,13 @@ app.controller("chartController", ['$scope', 'dataFactory', function($scope, dat
     if (targetIndex === -1) {
       console.error("Unable to find matching airline in data set.");
     }
-
+    
     //Find data by month in range, taking into account months with no data
     let target = $scope.dataBin.cost[targetIndex];
-    let targetCount = 0;
+    let targetCount = $scope.range[0];
     $scope.data = [];
     let value = 0;
+
     for (let i = 0; i < $scope.labels.length; i++) {
       if (target[targetCount]["date"] === $scope.labels[i]) {
         value = target[targetCount]["value"];
@@ -182,16 +187,14 @@ app.controller("chartController", ['$scope', 'dataFactory', function($scope, dat
       } else {
         value = 0;
       }
-      $scope.data.push(value);
-      if (targetCount === $scope.labels.length) {
-        break;
-      }      
+      $scope.data.push(value);       
     }
   }
 
+  //updates data for bar graph
   $scope.updateBarData = function() {
     var targetIndex = -1;
-    console.log($scope.dataBin.airportList); for (let i = 0; i < $scope.dataBin.airportList.length; i++) {
+    for (let i = 0; i < $scope.dataBin.airportList.length; i++) {
       if ($scope.selectedAirport === $scope.dataBin.airportList[i]) {
         targetIndex = i;
       }
@@ -199,8 +202,9 @@ app.controller("chartController", ['$scope', 'dataFactory', function($scope, dat
     if (targetIndex === -1) {
       console.error("Unable to find matching airport in data set.");
     }
+
     let target = $scope.dataBin.claims[targetIndex];
-    let targetCount = 0;
+    let targetCount = $scope.range[0];
     $scope.data = [];
     let total = 0;
     for (let i = 0; i < $scope.labels.length; i++) {
@@ -210,14 +214,11 @@ app.controller("chartController", ['$scope', 'dataFactory', function($scope, dat
       } else {
         total = 0;
       }
-      $scope.data.push(total);
-      if (targetCount === $scope.labels.length) {
-        break;
-      }      
+      $scope.data.push(total);     
     }
   }
   
-
+  //updates view for changing options concerning line graph
   $scope.updateLinePage = function() {
     $scope.type = "line";
 
@@ -225,12 +226,15 @@ app.controller("chartController", ['$scope', 'dataFactory', function($scope, dat
     lineOps.addClass("hidden"); 
     var barOps = angular.element(document.querySelector("#lineOptions"));    
     barOps.removeClass("hidden");
+    angular.element(document.querySelector("#airlineLabel")).removeClass("hidden");
+    angular.element(document.querySelector("#airportLabel")).addClass("hidden");
     
     $scope.getMonths();
     $scope.createLabels();
     $scope.updateData();
   }
 
+  //updates view for changing options concerning bar graph
   $scope.updateBarPage = function() {
     $scope.type = "bar";
   
@@ -238,6 +242,9 @@ app.controller("chartController", ['$scope', 'dataFactory', function($scope, dat
     lineOps.addClass("hidden"); 
     var barOps = angular.element(document.querySelector("#barOptions"));    
     barOps.removeClass("hidden");
+    angular.element(document.querySelector("#airlineLabel")).addClass("hidden");
+    angular.element(document.querySelector("#airportLabel")).removeClass("hidden");
+    
 
     $scope.getMonths();
     $scope.createLabels();

@@ -1,3 +1,38 @@
 .hidden {
     display: none;
 }
+
+.graph-btns {
+    width: 40%;
+    margin: auto;
+}
+
+.graph-btn {
+    width: 49%;
+    font-size: 1.2em;
+    margin: 15px 0;
+}
+
+.options-area {
+    margin: 15px;
+    margin: auto;
+    width: 60%;
+}
+
+.submit-btn {
+    display: inline-block;
+    
+    margin: auto;
+}
+
+.graph-container {
+    width: 80%;
+    margin: auto;
+    margin-top: 20px;
+    height: auto;
+}
+
+.chart-label {
+    text-align: center;
+  
+}
