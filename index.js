@@ -11,7 +11,8 @@ app.factory('dataFactory', function($http) {
     return $http({
       url: "https://cors-anywhere.herokuapp.com/https://www.dhs.gov/sites/default/files/publications/claims-2010-2013_0.xls",
       method: "GET",
-      responseType: "arraybuffer"
+      responseType: "arraybuffer",
+      headers: { 'Content-Type': 'text/plain' }
     })
   }
 
@@ -49,11 +50,14 @@ app.factory('dataFactory', function($http) {
     var monthlyValue = [[{ date: claimDate, value: claimValue }]]; /*array will hold arrays that correspond to the index of each airline.  each nested array will hold a series of objects.
                                                                      Objects in nested arrays will be structured in the format: { date: "JAN-10", value: 100.00 } */
 
+                                                                  
     for (let i = 1; i < dataSet.length; i++) {
+      //If the date recieved is not included, ignore item.   
       if (dataSet[i]["Date Received"] === undefined) {
         continue;
       } 
 
+      //alter entry data to standard form
       airportName = dataSet[i]["Airport Name"].trim() + " (" + dataSet[i]["Airport Code"].trim() +")";
       airlineName = dataSet[i]["Airline Name"].trim();
       claimDate = dataSet[i]["Date Received"].slice(-6);
@@ -61,30 +65,41 @@ app.factory('dataFactory', function($http) {
 
       claimValue = dataFactory.processClaimValue(claimValueStr);
 
-      for (let j = 0; j < airports.length; j++) {
+      //Check if the airports is associated with data previously processed
+      let airportsLength = airports.length;
+      for (let j = 0; j < airportsLength; j++) {
         if (airportName === airports[j]) {
-
+          //if yes, check if claim is in the latest month
           if (monthlyClaims[j][monthlyClaims[j].length - 1].date === claimDate) {
+            //if true, increment data
             monthlyClaims[j][monthlyClaims[j].length - 1].total += 1;
           } else {
+            //else, create new month and append to existing array
             monthlyClaims[j].push({ date: claimDate, total: 1 });
           }
           break;
-        } else if (j === airports.length - 1) {      
+        } else if (j === airportsLength - 1) {     
+          //else add new airport with item 
           airports.push(airportName);
           monthlyClaims.push([{ date: claimDate, total: 1 }]);
         }
       }
 
-      for (let j = 0; j < airlines.length; j++) {
+      //Check if the airline is associated with data previously processed
+      let airlinesLength = airlines.length;
+      for (let j = 0; j < airlinesLength; j++) {
         if (airlineName === airlines[j]) {
+          //if yes, check if claim is in the latest month
           if (monthlyValue[j][monthlyValue[j].length - 1].date === claimDate) {
+            //if yes, update data of latest month
             monthlyValue[j][monthlyValue[j].length - 1].value += claimValue;
           } else {
+            //append data for latest month
             monthlyValue[j].push({ date: claimDate, value: claimValue });
           }
           break;
-        } else if (j === airlines.length - 1) {
+        } else if (j === airlinesLength - 1) {
+          //add airline with new item
           airlines.push(airlineName);
           monthlyValue.push([{date: claimDate, value: claimValue}]);
         }
@@ -108,13 +123,13 @@ app.factory('dataFactory', function($http) {
 
 
 app.controller("chartController", ['$scope', 'dataFactory', function($scope, dataFactory) { 
-  $scope.selectedAirline = "Delta Air Lines";
+  $scope.selectedAirline = "Delta Air Lines"; 
   $scope.selectedAirport = "McCarran International (LAS)";
-  $scope.startDate = "Jan-10";
-  $scope.endDate = "Dec-13";
-  $scope.months = [];
-  $scope.data = [];
-  $scope.labels = [];
+  $scope.startDate = "Jan-10";  //start date for graphical display
+  $scope.endDate = "Dec-13";    //end date for graphical display
+  $scope.months = [];           //months included between the start and end dates
+  $scope.data = [];             //data associated with the months array
+  $scope.labels = [];           
   $scope.series = ['Series A', 'Series B'];
   $scope.type = "line";
 
@@ -141,7 +156,9 @@ app.controller("chartController", ['$scope', 'dataFactory', function($scope, dat
   $scope.createLabels = function() {
     $scope.labels = [];
     $scope.range = [];
-    for (let i = 0; i < $scope.months.length; i++) {
+
+    let monthsLength = $scope.months.length;
+    for (let i = 0; i < monthsLength; i++) {
       let month = $scope.dataBin.cost[0][i]["date"];
       if (month === $scope.startDate) {
         $scope.range.push(i);
@@ -163,8 +180,8 @@ app.controller("chartController", ['$scope', 'dataFactory', function($scope, dat
   $scope.updateData = function() {
     //find index of target
     var targetIndex = -1;
-
-    for (let i = 0; i < $scope.dataBin.airlineList.length; i++) {
+    let airlinesListLength = $scope.dataBin.airlineList.length
+    for (let i = 0; i < airlinesListLength; i++) {
       if ($scope.selectedAirline === $scope.dataBin.airlineList[i]) {
         targetIndex = i;
         break;
@@ -180,7 +197,8 @@ app.controller("chartController", ['$scope', 'dataFactory', function($scope, dat
     $scope.data = [];
     let value = 0;
 
-    for (let i = 0; i < $scope.labels.length; i++) {
+    let labelsLength = $scope.labels.length
+    for (let i = 0; i < labelsLength; i++) {
       if (target[targetCount]["date"] === $scope.labels[i]) {
         value = target[targetCount]["value"];
         targetCount++;
@@ -194,11 +212,14 @@ app.controller("chartController", ['$scope', 'dataFactory', function($scope, dat
   //updates data for bar graph
   $scope.updateBarData = function() {
     var targetIndex = -1;
-    for (let i = 0; i < $scope.dataBin.airportList.length; i++) {
+
+    let airportListLength = $scope.dataBin.airportList.length;
+    for (let i = 0; i < airportListLength; i++) {
       if ($scope.selectedAirport === $scope.dataBin.airportList[i]) {
         targetIndex = i;
       }
     }
+
     if (targetIndex === -1) {
       console.error("Unable to find matching airport in data set.");
     }
@@ -207,7 +228,9 @@ app.controller("chartController", ['$scope', 'dataFactory', function($scope, dat
     let targetCount = $scope.range[0];
     $scope.data = [];
     let total = 0;
-    for (let i = 0; i < $scope.labels.length; i++) {
+
+    let labelsLength = $scope.labels.length;
+    for (let i = 0; i < labelsLength; i++) {
       if (target[targetCount]["date"] === $scope.labels[i]) {
         total = target[targetCount].total;
         targetCount++;
