@@ -14,8 +14,8 @@
             <div>
                 <!-- buttons to switch graph shown -->
                 <div class="graph-btns">
-                    <button ng-click="updateLinePage()" class="graph-btn">Value Lost by Airline</button>
-                    <button ng-click="updateBarPage()" class="graph-btn">Number of Claims by Airport</button>
+                    <button ng-click="updateLinePage()" class="graph-btn line-btn active-btn">Value Lost by Airline</button><!--
+                    --><button ng-click="updateBarPage()" class="graph-btn bar-btn">Number of Claims by Airport</button>
                 </div> 
             </div>
     
@@ -53,6 +53,7 @@
     
             <div class="graph-container">
                 <!-- should hold the graph itself -->
+                <p class="y-axis-label" id="yAxisLabel">Value of Lost Claims</p>
                 <canvas id="graph" class="chart-base graph" chart-data="data" chart-labels="labels" chart-series="series" chart-options="options" chart-type="type" chart-dataset-override="datasetOverride" chart-click="onClick">
             </canvas>
             </div>

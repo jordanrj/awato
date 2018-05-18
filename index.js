@@ -213,6 +213,7 @@ app.controller("chartController", ['$scope', 'dataFactory', function($scope, dat
   $scope.updateBarData = function() {
     var targetIndex = -1;
 
+    //finds the index of the specified airport
     let airportListLength = $scope.dataBin.airportList.length;
     for (let i = 0; i < airportListLength; i++) {
       if ($scope.selectedAirport === $scope.dataBin.airportList[i]) {
@@ -224,6 +225,7 @@ app.controller("chartController", ['$scope', 'dataFactory', function($scope, dat
       console.error("Unable to find matching airport in data set.");
     }
 
+    //finds claims associated with the airports during the specified time range
     let target = $scope.dataBin.claims[targetIndex];
     let targetCount = $scope.range[0];
     $scope.data = [];
@@ -251,7 +253,8 @@ app.controller("chartController", ['$scope', 'dataFactory', function($scope, dat
     barOps.removeClass("hidden");
     angular.element(document.querySelector("#airlineLabel")).removeClass("hidden");
     angular.element(document.querySelector("#airportLabel")).addClass("hidden");
-    
+    document.getElementById("yAxisLabel").innerHTML = "Value of Lost Claims";
+
     $scope.getMonths();
     $scope.createLabels();
     $scope.updateData();
@@ -267,6 +270,7 @@ app.controller("chartController", ['$scope', 'dataFactory', function($scope, dat
     barOps.removeClass("hidden");
     angular.element(document.querySelector("#airlineLabel")).addClass("hidden");
     angular.element(document.querySelector("#airportLabel")).removeClass("hidden");
+    document.getElementById("yAxisLabel").innerHTML = "Number of Claims";
     
 
     $scope.getMonths();

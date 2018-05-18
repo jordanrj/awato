@@ -4,13 +4,34 @@
 
 .graph-btns {
     width: 40%;
-    margin: auto;
+    height: 50px;
+    margin: 10px auto;
 }
 
 .graph-btn {
+    height: 50px;
     width: 49%;
-    font-size: 1.2em;
-    margin: 15px 0;
+    border: none;
+}
+
+.graph-btn:hover {
+    background: rgb(65, 64, 64);
+    color: white;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.line-btn {
+    border-radius: 5px 0 0 5px;
+}
+
+.bar-btn {
+    border-radius: 0 5px 5px 0;
+}
+
+.active-btn {
+    background: rgb(65, 64, 64);
+    color: white;
 }
 
 .options-area {
@@ -28,7 +49,7 @@
 .graph-container {
     width: 80%;
     margin: auto;
-    margin-top: 20px;
+    margin-top: 40px;
     height: auto;
 }
 
