@@ -141,6 +141,9 @@ app.controller("chartController", ['$scope', 'dataFactory', function($scope, dat
   })
   .then(function() {
     $scope.updateLinePage();
+  }).then(function() {
+    document.getElementById("loadingIndicator").classList.add("hidden");
+    document.getElementById("appContainer").classList.remove("hidden");
   })
 
   $scope.getMonths = function() {
@@ -253,7 +256,10 @@ app.controller("chartController", ['$scope', 'dataFactory', function($scope, dat
     barOps.removeClass("hidden");
     angular.element(document.querySelector("#airlineLabel")).removeClass("hidden");
     angular.element(document.querySelector("#airportLabel")).addClass("hidden");
-    document.getElementById("yAxisLabel").innerHTML = "Value of Lost Claims";
+    document.getElementById("yAxisLabel").innerHTML = "Value of Lost Claims";  //update y axis label
+
+    document.getElementById("barBtn").classList.remove("active-btn");
+    document.getElementById("lineBtn").classList.add("active-btn");
 
     $scope.getMonths();
     $scope.createLabels();
@@ -270,7 +276,9 @@ app.controller("chartController", ['$scope', 'dataFactory', function($scope, dat
     barOps.removeClass("hidden");
     angular.element(document.querySelector("#airlineLabel")).addClass("hidden");
     angular.element(document.querySelector("#airportLabel")).removeClass("hidden");
-    document.getElementById("yAxisLabel").innerHTML = "Number of Claims";
+    document.getElementById("yAxisLabel").innerHTML = "Number of Claims";  //update y axis label
+    document.getElementById("lineBtn").classList.remove("active-btn");
+    document.getElementById("barBtn").classList.add("active-btn");
     
 
     $scope.getMonths();

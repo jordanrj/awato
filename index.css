@@ -1,3 +1,8 @@
+body {
+    text-align: center;
+    height: 80%;
+}
+
 .hidden {
     display: none;
 }
@@ -35,9 +40,8 @@
 }
 
 .options-area {
-    margin: 15px;
+    display: inline-block;
     margin: auto;
-    width: 60%;
 }
 
 .submit-btn {
@@ -47,13 +51,34 @@
 }
 
 .graph-container {
-    width: 80%;
+    width: 65%;
     margin: auto;
-    margin-top: 40px;
+    margin-top: 20px;
     height: auto;
 }
 
 .chart-label {
+    margin: 0 auto;
     text-align: center;
-  
+}
+
+.y-axis-label {
+    float: left;
+}
+
+/*loading animation*/
+.loading-animation {
+    display: inline-block;
+    margin: auto;
+    border: 8px solid #f3f3f3; /* Light grey */
+    border-top: 9px solid #5ea4d3; /* Blue */
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }

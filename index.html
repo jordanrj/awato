@@ -10,12 +10,16 @@
         <title>Awato Graph Project</title>
     </head>
     <body>
-        <div ng-app="chartApp" ng-controller="chartController">
+        <div id="loadingIndicator" class="loading-indicator">
+            <h2>Loading Data...</h2>
+            <div class="loading-animation"></div>
+        </div>
+        <div ng-app="chartApp" ng-controller="chartController" class="hidden" id="appContainer">
             <div>
                 <!-- buttons to switch graph shown -->
                 <div class="graph-btns">
-                    <button ng-click="updateLinePage()" class="graph-btn line-btn active-btn">Value Lost by Airline</button><!--
-                    --><button ng-click="updateBarPage()" class="graph-btn bar-btn">Number of Claims by Airport</button>
+                    <button ng-click="updateLinePage()" class="graph-btn line-btn active-btn" id="lineBtn">Value Lost by Airline</button><!--
+                    --><button ng-click="updateBarPage()" class="graph-btn bar-btn" id="barBtn">Number of Claims by Airport</button>
                 </div> 
             </div>
     
