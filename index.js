@@ -16,8 +16,20 @@ app.factory('dataFactory', function($http) {
     })
   }
 
+  return dataFactory;
+})
+
+
+
+
+
+
+
+/* processFactory processes raw data to standard form */
+app.factory('processFactory', function() {
+  var processFactory = {};
   //Converts raw xls data to JSON using xlsx
-  dataFactory.convertToJSON = function(res) {
+  processFactory.convertToJSON = function(res) {
     let data = new Uint8Array(res.data);
     let workbook = XLSX.read(data, {type: 'array'});
     let sheet = workbook.SheetNames[0];
@@ -34,14 +46,14 @@ app.factory('dataFactory', function($http) {
       "montlyValue": contains a series of arrays, with the index of each nested array corresponding to the index of associated airport in "airports".
           *Each nested array contains a series of objects, each having two attributes: 1) the month ('MM-YY') and 2) the total value of claims for that month (float).
   */
-  dataFactory.aggregateData = function(dataSet) {
+  processFactory.aggregateData = function(dataSet) {
     //retrieving initial values from data
     let airportName = dataSet[0]["Airport Name"].trim() + " (" + dataSet[0]["Airport Code"].trim() +")";
     let airlineName = dataSet[0]["Airline Name"].trim();
     let claimDate = dataSet[0]["Date Received"].slice(-6);
     let claimValueStr = dataSet[0]["Close Amount"];
 
-    let claimValue = dataFactory.processClaimValue(claimValueStr);
+    let claimValue = processFactory.processClaimValue(claimValueStr);
 
     //initializing data arrays
     var airlines = [airlineName];    
@@ -63,7 +75,7 @@ app.factory('dataFactory', function($http) {
       claimDate = dataSet[i]["Date Received"].slice(-6);
       claimValueStr = dataSet[i]["Close Amount"];
 
-      claimValue = dataFactory.processClaimValue(claimValueStr);
+      claimValue = processFactory.processClaimValue(claimValueStr);
 
       //Check if the airports is associated with data previously processed
       let airportsLength = airports.length;
@@ -109,7 +121,7 @@ app.factory('dataFactory', function($http) {
   }
 
   // Returns string dollar value of format '$X.XX' as float.  (not limited to 3 digits).
-  dataFactory.processClaimValue = function(claimValueStr) {
+  processFactory.processClaimValue = function(claimValueStr) {
     claimValueStr = claimValueStr.replace(/\s/g, '');
     claimValueStr = claimValueStr.replace(/\$/g, '');
     if (claimValueStr === '-' || claimValueStr === '') {
@@ -117,75 +129,62 @@ app.factory('dataFactory', function($http) {
     }
     return parseFloat(claimValueStr);
   }
-
-  return dataFactory;
+ 
+ return processFactory;
 })
 
 
-app.controller("chartController", ['$scope', 'dataFactory', function($scope, dataFactory) { 
-  $scope.selectedAirline = "Delta Air Lines"; 
-  $scope.selectedAirport = "McCarran International (LAS)";
-  $scope.startDate = "Jan-10";  //start date for graphical display
-  $scope.endDate = "Dec-13";    //end date for graphical display
-  $scope.months = [];           //months included between the start and end dates
-  $scope.data = [];             //data associated with the months array
-  $scope.labels = [];           
-  $scope.series = ['Series A', 'Series B'];
-  $scope.type = "line";
 
-  dataFactory.getData()
-  .then(function(res) {
-    let jsonData = dataFactory.convertToJSON(res);
 
-    $scope.dataBin = dataFactory.aggregateData(jsonData);  //dataBin will hold all aggregated data, and will be referenced as needed.
-  })
-  .then(function() {
-    $scope.updateLinePage();
-  }).then(function() {
-    document.getElementById("loadingIndicator").classList.add("hidden");
-    document.getElementById("appContainer").classList.remove("hidden");
-  })
 
-  $scope.getMonths = function() {
-    $scope.months = [];
 
-    for (let i = 0; i < $scope.dataBin.cost[0].length; i++) { //using first entry because I know Delta has claims for every month and i'm a bit lazy.
-      let month = $scope.dataBin.cost[0][i]["date"];
-      $scope.months.push(month); 
+/* Updates data values based on changing parameters and returns updated values to controller */
+app.factory('updateFactory', function() {
+  var updateFactory = {};
+
+  updateFactory.getMonths = function(dataBin) {
+    let months = [];
+
+    for (let i = 0; i < dataBin.cost[0].length; i++) { //using first entry because I know Delta has claims for every month and i'm a bit lazy.
+      let month = dataBin.cost[0][i]["date"];
+      months.push(month); 
     }
+
+    return months;
   }
 
   //Ensures that graph labels correspond to range specified in options
-  $scope.createLabels = function() {
-    $scope.labels = [];
-    $scope.range = [];
+  updateFactory.createLabels = function(months, dataBin, startDate, endDate) {
+    let labelsArr = [];
+    let rangeArr = [];
 
-    let monthsLength = $scope.months.length;
+    let monthsLength = months.length;
     for (let i = 0; i < monthsLength; i++) {
-      let month = $scope.dataBin.cost[0][i]["date"];
-      if (month === $scope.startDate) {
-        $scope.range.push(i);
+      let month = dataBin.cost[0][i]["date"];
+      if (month === startDate) {
+        rangeArr.push(i);
         do {
-          $scope.labels.push(month); 
+          labelsArr.push(month); 
           i++;
-          month = $scope.months[i];                           
-        } while (month !== $scope.endDate); 
-        if (month === $scope.endDate) {
-          $scope.range.push(i);
+          month = months[i];                           
+        } while (month !== endDate); 
+        if (month === endDate) {
+          rangeArr.push(i);
         }
-        $scope.labels.push(month); 
+        labelsArr.push(month); 
         break;
       }
     }
+    return {labels: labelsArr, range: rangeArr};
   }
 
   //updates data for line graph
-  $scope.updateData = function() {
+  updateFactory.updateData = function(dataBin, selectedAirline, range, labels) {
     //find index of target
     var targetIndex = -1;
-    let airlinesListLength = $scope.dataBin.airlineList.length
+    let airlinesListLength = dataBin.airlineList.length
     for (let i = 0; i < airlinesListLength; i++) {
-      if ($scope.selectedAirline === $scope.dataBin.airlineList[i]) {
+      if (selectedAirline === dataBin.airlineList[i]) {
         targetIndex = i;
         break;
       }
@@ -195,31 +194,32 @@ app.controller("chartController", ['$scope', 'dataFactory', function($scope, dat
     }
     
     //Find data by month in range, taking into account months with no data
-    let target = $scope.dataBin.cost[targetIndex];
-    let targetCount = $scope.range[0];
-    $scope.data = [];
+    let target = dataBin.cost[targetIndex];
+    let targetCount = range[0];
+    let data = [];
     let value = 0;
-
-    let labelsLength = $scope.labels.length
+    let labelsLength = labels.length
     for (let i = 0; i < labelsLength; i++) {
-      if (target[targetCount]["date"] === $scope.labels[i]) {
+      if (target[targetCount]["date"] === labels[i]) {
         value = target[targetCount]["value"];
         targetCount++;
       } else {
         value = 0;
       }
-      $scope.data.push(value);       
+      data.push(value);       
     }
+
+    return data;
   }
 
   //updates data for bar graph
-  $scope.updateBarData = function() {
+  updateFactory.updateBarData = function(dataBin, selectedAirport, range, labels) {
     var targetIndex = -1;
 
     //finds the index of the specified airport
-    let airportListLength = $scope.dataBin.airportList.length;
+    let airportListLength = dataBin.airportList.length;
     for (let i = 0; i < airportListLength; i++) {
-      if ($scope.selectedAirport === $scope.dataBin.airportList[i]) {
+      if (selectedAirport === dataBin.airportList[i]) {
         targetIndex = i;
       }
     }
@@ -229,26 +229,28 @@ app.controller("chartController", ['$scope', 'dataFactory', function($scope, dat
     }
 
     //finds claims associated with the airports during the specified time range
-    let target = $scope.dataBin.claims[targetIndex];
-    let targetCount = $scope.range[0];
-    $scope.data = [];
+    let target = dataBin.claims[targetIndex];
+    let targetCount = range[0];
+    let data = [];
     let total = 0;
 
-    let labelsLength = $scope.labels.length;
+    let labelsLength = labels.length;
     for (let i = 0; i < labelsLength; i++) {
-      if (target[targetCount]["date"] === $scope.labels[i]) {
+      if (target[targetCount]["date"] === labels[i]) {
         total = target[targetCount].total;
         targetCount++;
       } else {
         total = 0;
       }
-      $scope.data.push(total);     
+      data.push(total);     
     }
+
+    return data;
   }
   
   //updates view for changing options concerning line graph
-  $scope.updateLinePage = function() {
-    $scope.type = "line";
+  updateFactory.updateLinePage = function() {
+    //let type = "line";
 
     var lineOps = angular.element(document.querySelector("#barOptions"));     
     lineOps.addClass("hidden"); 
@@ -261,14 +263,14 @@ app.controller("chartController", ['$scope', 'dataFactory', function($scope, dat
     document.getElementById("barBtn").classList.remove("active-btn");
     document.getElementById("lineBtn").classList.add("active-btn");
 
-    $scope.getMonths();
-    $scope.createLabels();
-    $scope.updateData();
+    //getMonths();
+    //createLabels();
+    //updateData();
   }
 
   //updates view for changing options concerning bar graph
-  $scope.updateBarPage = function() {
-    $scope.type = "bar";
+  updateFactory.updateBarPage = function() {
+    //let type = "bar";
   
     var lineOps = angular.element(document.querySelector("#lineOptions"));     
     lineOps.addClass("hidden"); 
@@ -281,10 +283,66 @@ app.controller("chartController", ['$scope', 'dataFactory', function($scope, dat
     document.getElementById("barBtn").classList.add("active-btn");
     
 
-    $scope.getMonths();
-    $scope.createLabels();
-    $scope.updateBarData();
+    //getMonths();
+    //createLabels();
+    //updateBarData();
   }
+
+  return updateFactory;
+})
+
+
+
+
+
+
+
+angular.module("chartApp")
+  .controller("chartController", ['$scope', 'dataFactory', 'processFactory', 'updateFactory', function($scope, dataFactory, processFactory, updateFactory) { 
+  $scope.selectedAirline = "Delta Air Lines"; 
+  $scope.selectedAirport = "McCarran International (LAS)";
+  $scope.startDate = "Jan-10";  //start date for graphical display
+  $scope.endDate = "Dec-13";    //end date for graphical display
+  $scope.months = [];           //months included between the start and end dates
+  $scope.data = [];             //data associated with the months array
+  $scope.labels = [];           
+  $scope.series = ['Series A', 'Series B'];
+  $scope.type = "line";
+
+  dataFactory.getData()
+  .then(function(res) {
+    return processFactory.convertToJSON(res);
+  }).then(function(resJSON) {
+    $scope.dataBin = processFactory.aggregateData(resJSON);
+    //$scope.dataBin = processFactory.cleanData(res);  //dataBin will hold all aggregated data, and will be referenced as needed.
+  })
+  .then(function() {
+    $scope.updateToLine();
+  }).then(function() {
+    document.getElementById("loadingIndicator").classList.add("hidden");
+    document.getElementById("appContainer").classList.remove("hidden");
+  })
+
+  $scope.updateToLine = function() {
+    $scope.type = "line";
+    $scope.months = updateFactory.getMonths($scope.dataBin);
+    let labelsRange = updateFactory.createLabels($scope.months, $scope.dataBin, $scope.startDate, $scope.endDate);
+    $scope.labels = labelsRange.labels;
+    $scope.range = labelsRange.range;
+    $scope.data = updateFactory.updateData($scope.dataBin, $scope.selectedAirline, $scope.range, $scope.labels);
+    updateFactory.updateLinePage();
+  }
+
+  $scope.updateToBar = function() {
+    $scope.type = "bar";
+    $scope.months = updateFactory.getMonths($scope.dataBin);
+    let labelsRange = updateFactory.createLabels($scope.months, $scope.dataBin, $scope.startDate, $scope.endDate);
+    $scope.labels = labelsRange.labels;
+    $scope.range = labelsRange.range;
+    $scope.data = updateFactory.updateBarData($scope.dataBin, $scope.selectedAirport, $scope.range, $scope.labels);
+    updateFactory.updateBarPage();
+  }
+  
 
   $scope.datasetOverride = [{ yAxisID: 'y-axis-1' }];
   $scope.options = {

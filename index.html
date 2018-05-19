@@ -18,15 +18,15 @@
             <div>
                 <!-- buttons to switch graph shown -->
                 <div class="graph-btns">
-                    <button ng-click="updateLinePage()" class="graph-btn line-btn active-btn" id="lineBtn">Value Lost by Airline</button><!--
-                    --><button ng-click="updateBarPage()" class="graph-btn bar-btn" id="barBtn">Number of Claims by Airport</button>
+                    <button ng-click="updateToLine()" class="graph-btn line-btn active-btn" id="lineBtn">Value Lost by Airline</button><!--
+                    --><button ng-click="updateToBar()" class="graph-btn bar-btn" id="barBtn">Number of Claims by Airport</button>
                 </div> 
             </div>
     
             <div class="options-area">
                 <!-- Options for graph view -->
                 <!-- if line graph -->
-                <form id="lineOptions" ng-submit="updateLinePage()">
+                <form id="lineOptions" ng-submit="updateToLine()">
                     <label for="">Airline: </label>
                     <select ng-model="selectedAirline" ng-options="x for x in dataBin.airlineList">
                     </select>
@@ -40,7 +40,7 @@
                     <input class="submit-btn" type="submit">
                 </form>
 
-                <form id="barOptions" class="hidden" ng-submit="updateBarPage()">
+                <form id="barOptions" class="hidden" ng-submit="updateToBar()">
                     <label for="">Airport: </label>
                     <select ng-model="selectedAirport" ng-options="x for x in dataBin.airportList">
                     </select>
