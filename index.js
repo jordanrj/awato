@@ -262,10 +262,6 @@ app.factory('updateFactory', function() {
 
     document.getElementById("barBtn").classList.remove("active-btn");
     document.getElementById("lineBtn").classList.add("active-btn");
-
-    //getMonths();
-    //createLabels();
-    //updateData();
   }
 
   //updates view for changing options concerning bar graph
@@ -281,11 +277,6 @@ app.factory('updateFactory', function() {
     document.getElementById("yAxisLabel").innerHTML = "Number of Claims";  //update y axis label
     document.getElementById("lineBtn").classList.remove("active-btn");
     document.getElementById("barBtn").classList.add("active-btn");
-    
-
-    //getMonths();
-    //createLabels();
-    //updateBarData();
   }
 
   return updateFactory;
@@ -312,9 +303,11 @@ angular.module("chartApp")
   dataFactory.getData()
   .then(function(res) {
     return processFactory.convertToJSON(res);
+  }, function() {
+    document.getElementById("loadingText").innerHTML = "Sorry, the TSA server is not responding. Please try again later.";
+    document.getElementById("loadingAnimation").classList.remove("loading-animation");
   }).then(function(resJSON) {
     $scope.dataBin = processFactory.aggregateData(resJSON);
-    //$scope.dataBin = processFactory.cleanData(res);  //dataBin will hold all aggregated data, and will be referenced as needed.
   })
   .then(function() {
     $scope.updateToLine();
@@ -346,6 +339,11 @@ angular.module("chartApp")
 
   $scope.datasetOverride = [{ yAxisID: 'y-axis-1' }];
   $scope.options = {
+    elements: {
+      line: {
+          tension: .3, // disables bezier curves
+      }
+    },
     scales: {
       yAxes: [
         {
