@@ -7,16 +7,23 @@ body {
     display: none;
 }
 
+.app-main {
+    font-family: verdana;
+}
+
 .graph-btns {
     width: 40%;
-    height: 50px;
+    max-height: 50px;
     margin: 10px auto;
+    display: table;
 }
 
 .graph-btn {
     height: 50px;
     width: 49%;
     border: none;
+    display: table-cell;
+    vertical-align: top;
 }
 
 .graph-btn:hover {
@@ -60,6 +67,7 @@ body {
 .chart-label {
     margin: 0 auto;
     text-align: center;
+    font-weight: 500;
 }
 
 .y-axis-label {
@@ -81,4 +89,16 @@ body {
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+@media (max-width: 921px) {
+    .graph-container {
+        width: 85%;
+    }
+}
+
+@media (max-width: 500px) {
+    .graph-container {
+        width: 93%;
+    }
 }
